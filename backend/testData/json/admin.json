@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Test Admin",
+    "email": "test.admin@mail.com",
+    "salt": "0b6d85338ebccb945c5dc3dcaba4f6dc",
+    "hash": "19cf2d2def747564383307922aa3c6a3c0bedc5c0bb4ab85f8844207785ccbf814fd770f9699df1bee9ac0bd1a18f523b475295e28d7387be435a8033222da76"
+  }
+]
