@@ -1,21 +1,5 @@
 version: '3'
 services:
-  #
-  # Client
-  #
-  client:
-    image: von-network-base
-    command: ./scripts/start_client.sh
-    environment:
-      - IP=${IP}
-      - IPS=${IPS}
-      - DOCKERHOST=${DOCKERHOST}
-      - RUST_LOG=${RUST_LOG}
-    networks:
-      - von
-    volumes:
-      - client-data:/home/indy/.indy_client
-      - ./tmp:/tmp
 
   #
   # Webserver
@@ -37,88 +21,43 @@ services:
       - POOL_CONNECTION_ATTEMPTS=${POOL_CONNECTION_ATTEMPTS:-5}
       - POOL_CONNECTION_DELAY=${POOL_CONNECTION_DELAY:-10}
       - REGISTER_NEW_DIDS=${REGISTER_NEW_DIDS:-True}
-      - ENABLE_LEDGER_CACHE=${ENABLE_LEDGER_CACHE:-True}
-      - ENABLE_BROWSER_ROUTES=${ENABLE_BROWSER_ROUTES:-True}
-      - DISPLAY_LEDGER_STATE=${DISPLAY_LEDGER_STATE:-True}
       - LEDGER_INSTANCE_NAME=${LEDGER_INSTANCE_NAME:-localhost}
-      - LEDGER_DESCRIPTION=${LEDGER_DESCRIPTION}
       - WEB_ANALYTICS_SCRIPT=${WEB_ANALYTICS_SCRIPT}
       - INFO_SITE_TEXT=${INFO_SITE_TEXT}
       - INFO_SITE_URL=${INFO_SITE_URL}
       - INDY_SCAN_URL=${INDY_SCAN_URL}
       - INDY_SCAN_TEXT=${INDY_SCAN_TEXT}
+    ports:
+      - "127.0.0.1:8000:8000"
     networks:
       - von
-    ports:
-      - ${WEB_SERVER_HOST_PORT:-9000}:8000
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:8000/genesis || exit 1" ]
+      interval: 20s
+      retries: 10
+      timeout: 10s
     volumes:
       - ./config:/home/indy/config
       - ./server:/home/indy/server
       - webserver-cli:/home/indy/.indy-cli
       - webserver-ledger:/home/indy/ledger
 
-  #
-  # Synchronization test
-  #
-  synctest:
-    image: von-network-base
-    command: ./scripts/start_synctest.sh
-    environment:
-      - IP=${IP}
-      - IPS=${IPS}
-      - DOCKERHOST=${DOCKERHOST}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - RUST_LOG=${RUST_LOG}
-    networks:
-      - von
-    ports:
-      - ${WEB_SERVER_HOST_PORT:-9000}:8000
-    volumes:
-      - ./config:/home/indy/config
-      - ./server:/home/indy/server
-      - webserver-cli:/home/indy/.indy-cli
-      - webserver-ledger:/home/indy/ledger
-
-  #
-  # Nodes
-  #
-  nodes:
-    image: von-network-base
-    command: ./scripts/start_nodes.sh
-    networks:
-      - von
-    ports:
-      - 9701:9701
-      - 9702:9702
-      - 9703:9703
-      - 9704:9704
-      - 9705:9705
-      - 9706:9706
-      - 9707:9707
-      - 9708:9708
-    environment:
-      - IP=${IP}
-      - IPS=${IPS}
-      - DOCKERHOST=${DOCKERHOST}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - RUST_LOG=${RUST_LOG}
-    volumes:
-      - nodes-data:/home/indy/ledger
 
   node1:
     image: von-network-base
     command: ./scripts/start_node.sh 1
     networks:
       - von
-    ports:
-      - 9701:9701
-      - 9702:9702
     environment:
       - IP=${IP}
       - IPS=${IPS}
       - DOCKERHOST=${DOCKERHOST}
       - LOG_LEVEL=${LOG_LEVEL}
       - RUST_LOG=${RUST_LOG}
+      - NODE_HOST=node1
+    ports:
+      - "127.0.0.1:9702:9702"
+      - "127.0.0.1:9701:9701"
     volumes:
       - node1-data:/home/indy/ledger
 
@@ -127,15 +66,16 @@ services:
     command: ./scripts/start_node.sh 2
     networks:
       - von
-    ports:
-      - 9703:9703
-      - 9704:9704
     environment:
       - IP=${IP}
       - IPS=${IPS}
       - DOCKERHOST=${DOCKERHOST}
       - LOG_LEVEL=${LOG_LEVEL}
       - RUST_LOG=${RUST_LOG}
+      - NODE_HOST=node2
+    ports:
+      - "127.0.0.1:9704:9704"
+      - "127.0.0.1:9703:9703"
     volumes:
       - node2-data:/home/indy/ledger
 
@@ -144,15 +84,16 @@ services:
     command: ./scripts/start_node.sh 3
     networks:
       - von
-    ports:
-      - 9705:9705
-      - 9706:9706
     environment:
       - IP=${IP}
       - IPS=${IPS}
       - DOCKERHOST=${DOCKERHOST}
       - LOG_LEVEL=${LOG_LEVEL}
       - RUST_LOG=${RUST_LOG}
+      - NODE_HOST=node3
+    ports:
+      - "127.0.0.1:9706:9706"
+      - "127.0.0.1:9705:9705"
     volumes:
       - node3-data:/home/indy/ledger
 
@@ -161,17 +102,165 @@ services:
     command: ./scripts/start_node.sh 4
     networks:
       - von
-    ports:
-      - 9707:9707
-      - 9708:9708
     environment:
       - IP=${IP}
       - IPS=${IPS}
       - DOCKERHOST=${DOCKERHOST}
       - LOG_LEVEL=${LOG_LEVEL}
       - RUST_LOG=${RUST_LOG}
+      - NODE_HOST=node4
+    ports:
+      - "127.0.0.1:9708:9708"
+      - "127.0.0.1:9707:9707"
     volumes:
       - node4-data:/home/indy/ledger
+
+  agent1:
+    image: aries-cloudagent-run
+    container_name: agent1
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh
+    entrypoint: ["/entrypoint.sh"]
+    command: >
+      start
+      --endpoint http://agent1:8020
+      --label faber.agent
+      --auto-ping-connection
+      --inbound-transport http 0.0.0.0 8020
+      --outbound-transport http
+      --admin 0.0.0.0 8021
+      --admin-api-key ${ADMIN_API_KEY}
+      --genesis-url http://webserver:8000/genesis
+      --seed seed1000000000000000000000000000
+      --wallet-type askar
+      --wallet-name faber.agent
+      --wallet-key faber.agent
+      --preserve-exchange-records
+      --auto-provision
+      --monitor-revocation-notification
+      --trace-target log
+      --trace-tag acapy.events
+      --trace-label faber.agent.trace
+      --auto-store-credential
+      --auto-verify-presentation
+      --auto-respond-messages
+      --auto-accept-intro-invitation-requests
+      --auto-verify-presentation
+      --auto-accept-requests
+      --auto-accept-invites
+      --log-level info
+    depends_on:
+      webserver:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8021:8021"
+    networks:
+      - von
+
+  agent2:
+    image: aries-cloudagent-run
+    container_name: agent2
+    volumes:
+      - ./entrypoint_2.sh:/entrypoint_2.sh
+    entrypoint: [ "/entrypoint_2.sh" ]
+    command: >
+      start
+      --endpoint http://agent2:8048
+      --label bob.agent
+      --auto-ping-connection
+      --inbound-transport http 0.0.0.0 8048
+      --outbound-transport http
+      --admin 0.0.0.0 8049
+      --admin-api-key ${ADMIN_API_KEY}
+      --wallet-type askar
+      --wallet-name bob.agent
+      --wallet-key bob.agent
+      --preserve-exchange-records
+      --auto-provision
+      --genesis-url http://webserver:8000/genesis
+      --seed seed2000000000000000000000000000
+      --monitor-revocation-notification
+      --trace-target log
+      --trace-tag acapy.events
+      --trace-label bob.agent.trace
+      --auto-store-credential
+      --auto-accept-requests
+      --auto-accept-invites
+      --log-level info
+    ports:
+      - "127.0.0.1:8049:8049"
+    depends_on:
+      webserver:
+        condition: service_healthy
+    networks:
+      - von
+
+  agent3:
+    image: aries-cloudagent-run
+    container_name: agent3
+    command: >
+      start
+      --endpoint http://agent3:8030
+      --label faber.agent
+      --auto-ping-connection
+      --inbound-transport http 0.0.0.0 8030
+      --outbound-transport http
+      --admin 0.0.0.0 8031
+      --wallet-type askar
+      --wallet-name alice.agent
+      --wallet-key alice.agent
+      --preserve-exchange-records
+      --auto-provision
+      --genesis-url http://webserver:8000/genesis
+      --monitor-revocation-notification
+      --admin-insecure-mode
+      --trace-target log
+      --trace-tag acapy.events
+      --trace-label alice.agent.trace
+      --auto-accept-invites
+      --auto-accept-requests
+      --auto-store-credential
+      --auto-respond-messages
+      --auto-accept-intro-invitation-requests
+      --auto-respond-presentation-proposal
+      --auto-respond-presentation-request
+      --multitenant
+      --multitenant-admin
+      --jwt-secret ${JWT_SECRET}
+    ports:
+      - "127.0.0.1:8031:8031"
+    depends_on:
+      webserver:
+        condition: service_healthy
+    networks:
+      - von
+
+  mongo-db:
+    image: mongo
+    container_name: ssi-mongo-db
+    networks:
+      - von
+
+  wallet-mongo-db:
+    image: mongo
+    container_name: ssi-wallet-mongo-db
+    networks:
+      - von
+  node-api:
+    image: backend-node-api
+    ports:
+      - "127.0.0.1:3000:3000"
+    build: ./
+    networks:
+      - von
+
+  wallet-node-api:
+    image: wallet-backend-node-api
+    ports:
+      - "127.0.0.1:4000:4000"
+    build: ./
+    networks:
+      - von
 
 networks:
   von:
