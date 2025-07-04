@@ -162,3 +162,5 @@ config/.samples.used
 
 # PyCharm
 .idea/
+
+.env
