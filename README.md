@@ -13,6 +13,10 @@ Predstavlja diplomsko nalogo na Fakulteti za računalništvo in informatiko Univ
 | **acapy-main**       | SSI agent (vir: https://github.com/openwallet-foundation/acapy) |
 | **von-network-main** | Testno omrežje (vir: https://github.com/bcgov/von-network/blob/main/docs/UsingVONNetwork.md)                                          |
 
+### Komponentni diagram rešitve
+
+![Komponentni diagram](docs/component_diagram_delo_1.png)
+
 ## Zagon rešitve
 
 
@@ -95,6 +99,10 @@ docker compose up --detach
 Študentska spletna aplikacija je na voljo na **localhost:3000**, spletna aplikacija zaposenih na fakulteti pa na **localhost:4000**.
 
 ### Fakultetna aplikacija (localhost:3000)
+
+### Diagram primerov uporabe
+
+![Diagram primerov uporabe](docs/diagram_primerov_uporabe_delo_poenostavljen_10.png)
 
 
 #### Vnos podatkov
